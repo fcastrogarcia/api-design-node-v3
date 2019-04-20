@@ -16,10 +16,51 @@ export const verifyToken = token =>
     })
   })
 
-export const signup = async (req, res) => {}
+export const signup = async (req, res) => {
+  if (!req.body.password || !req.body.email) {
+    return res.status(400).send({ message: 'Email and Password are required' })
+  }
+  try {
+    const user = await User.create(req.body)
+    const token = newToken(user)
+    return res.status(201).send({ token })
+  } catch (e) {
+    console.log(e)
+    return res.status(400).end()
+  }
 
-export const signin = async (req, res) => {}
+}
+
+export const signin = async (req, res) => {
+  if (!req.body.password || !req.body.email) {
+    return res.status(400).send({ message: 'Email and Password are required' })
+  }
+
+  const user = await User.findOne({ email: req.body.email })
+  if (!user) {
+    return res.status(401).end()
+  }
+  try {
+    const match = await user.checkPassword(req.body.password)
+    if (!match) {
+      return res.status(401).send({ message: 'Not auth' })
+    }
+  } catch (e) {
+    return res.status(401).send({ message: 'Not auth' })
+  }
+}
 
 export const protect = async (req, res, next) => {
+  let token = req.headers.authorization.split('Bearer ')[1] //el headers pasa un 'Bearer $token" y el split un array
+  if (!token) {
+    return res.status(401).send({ message: 'no auth' })
+  } 
+  try {
+    const payload = await verifyToken(token) 
+    const user = await User.findById(payload.id)
+  } catch (e) {
+    console.log(e)
+    return res.status(401).send({ message: 'no auth' })
+  }
   next()
 }
